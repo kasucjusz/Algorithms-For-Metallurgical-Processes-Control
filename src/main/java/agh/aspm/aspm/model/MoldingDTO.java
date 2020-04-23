@@ -88,4 +88,5 @@ public class MoldingDTO {
     private String P1434;
     private String P1435;
     private String P1440;
+    private String moldingSpeed;
 }

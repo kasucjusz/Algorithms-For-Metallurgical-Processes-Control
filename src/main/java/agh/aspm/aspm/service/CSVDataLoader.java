@@ -5,6 +5,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -16,7 +19,18 @@ import java.util.stream.Collectors;
 
 @Component
 public class CSVDataLoader {
+
+    public List<MoldingDTO> getBySpeed(String speed) {
+        return fetchData().stream()
+                .filter(x -> speed.equals(x.getMoldingSpeed()))
+                .collect(Collectors.toList());
+    }
+
     public List<MoldingDTO> getCSVFile() {
+        return fetchData();
+    }
+
+    private List<MoldingDTO> fetchData() {
         List<MoldingDTO> moldingDTOS = new LinkedList<>();
 
         try(Scanner sc = new Scanner(new InputStreamReader(new ClassPathResource("aspm_data.csv").getInputStream()))) {
@@ -108,6 +122,7 @@ public class CSVDataLoader {
                                 .P1434(values[77])
                                 .P1435(values[78])
                                 .P1440(values[79])
+                                .moldingSpeed(calculateMoldingSpeed(values[4]))
                                 .build()
                 );
             }
@@ -115,6 +130,13 @@ public class CSVDataLoader {
             e.printStackTrace();
         }
         return moldingDTOS;
+    }
+
+    private String calculateMoldingSpeed(String val) {
+        return new BigDecimal(val)
+                .setScale(1, RoundingMode.HALF_UP)
+                .round(new MathContext(1))
+                .toPlainString();
     }
 }
 
