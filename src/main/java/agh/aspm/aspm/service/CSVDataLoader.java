@@ -114,7 +114,7 @@ public class CSVDataLoader {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return moldingDTOS.stream().limit(50).collect(Collectors.toList());
+        return moldingDTOS;
     }
 }
 
