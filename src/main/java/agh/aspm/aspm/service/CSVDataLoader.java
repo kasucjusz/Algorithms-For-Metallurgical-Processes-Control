@@ -135,7 +135,6 @@ public class CSVDataLoader {
     private String calculateMoldingSpeed(String val) {
         return new BigDecimal(val)
                 .setScale(1, RoundingMode.HALF_UP)
-                .round(new MathContext(1))
                 .toPlainString();
     }
 }
