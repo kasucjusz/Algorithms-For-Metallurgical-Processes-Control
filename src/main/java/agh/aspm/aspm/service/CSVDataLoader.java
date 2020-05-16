@@ -4,26 +4,30 @@ import agh.aspm.aspm.model.MoldingDTO;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Scanner;
 import java.util.stream.Collectors;
+
+import static java.time.temporal.ChronoUnit.SECONDS;
 
 @Component
 public class CSVDataLoader {
 
     public List<MoldingDTO> getBySpeed(String speed) {
-        return fetchData().stream()
+        List<MoldingDTO> moldingDTOS=fetchData().stream()
                 .filter(x -> speed.equals(x.getMoldingSpeed()))
                 .collect(Collectors.toList());
+        reduceNotLongerThanTenMinutes(moldingDTOS);
+        return moldingDTOS;
     }
 
     public List<MoldingDTO> getCSVFile() {
@@ -32,6 +36,7 @@ public class CSVDataLoader {
 
     private List<MoldingDTO> fetchData() {
         List<MoldingDTO> moldingDTOS = new LinkedList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern ( "yyyy-MM-dd HH:mm:ss" );
 
         try(Scanner sc = new Scanner(new InputStreamReader(new ClassPathResource("aspm_data.csv").getInputStream()))) {
             sc.useDelimiter("\n");
@@ -42,7 +47,7 @@ public class CSVDataLoader {
                 String[] values = next.split(",");
                 moldingDTOS.add(
                         MoldingDTO.builder()
-                                .time(values[0])
+                                .time(LocalDateTime.parse(values[0].substring(0,19), formatter))
                                 .P1010(values[1])
                                 .P1012(values[2])
                                 .P1014(values[3])
@@ -136,6 +141,27 @@ public class CSVDataLoader {
         return new BigDecimal(val)
                 .setScale(1, RoundingMode.HALF_UP)
                 .toPlainString();
+    }
+    private List<MoldingDTO> reduceNotLongerThanTenMinutes(List<MoldingDTO> moldingDTOS){
+        //TODO
+        //Jeśli różnica dwóch sąsiednich <=10s - dodajemy element do nowej listy i zapisujemy w jednej zmiennej tymczasowej jego indeks
+        //W momencie napotkania różnicy większej niż 10s porównujemy czy czas na startowym indeksie z obecnym jest <=10min
+        List<MoldingDTO> reducedList=new ArrayList<>();
+    for(int i=0; i<moldingDTOS.size(); i++){
+        if(i<moldingDTOS.size()-1){
+            Duration d1 = Duration.between(moldingDTOS.get(i).getTime(), moldingDTOS.get(i+1).getTime());
+            Duration d2=Duration.ofSeconds(10);
+            if(d1.compareTo(d2)<=0){
+                System.out.println("Roznica mniejsza niz 10s");
+                System.out.println(moldingDTOS.get(i).getTime());
+            }
+            else {
+                System.out.println("Roznica wieksza niz 10s");
+                System.out.println(moldingDTOS.get(i).getTime());
+            }
+        }
+            }
+return reducedList;
     }
 }
 

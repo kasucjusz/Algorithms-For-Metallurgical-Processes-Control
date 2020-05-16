@@ -4,11 +4,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Builder
 @Getter
 @Setter
 public class MoldingDTO {
-    private String time;
+    private LocalDateTime time;
     private String P1010;
     private String P1012;
     private String P1014;
