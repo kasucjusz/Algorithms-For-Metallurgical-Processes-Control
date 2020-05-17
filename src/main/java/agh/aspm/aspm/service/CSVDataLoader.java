@@ -26,7 +26,7 @@ public class CSVDataLoader {
         List<MoldingDTO> moldingDTOS=fetchData().stream()
                 .filter(x -> speed.equals(x.getMoldingSpeed()))
                 .collect(Collectors.toList());
-        reduceNotLongerThanTenMinutes(moldingDTOS);
+        moldingDTOS=reduceNotLongerThanTenMinutes(moldingDTOS);
         return moldingDTOS;
     }
 
@@ -147,17 +147,37 @@ public class CSVDataLoader {
         //Jeśli różnica dwóch sąsiednich <=10s - dodajemy element do nowej listy i zapisujemy w jednej zmiennej tymczasowej jego indeks
         //W momencie napotkania różnicy większej niż 10s porównujemy czy czas na startowym indeksie z obecnym jest <=10min
         List<MoldingDTO> reducedList=new ArrayList<>();
-    for(int i=0; i<moldingDTOS.size(); i++){
+        List<MoldingDTO> tmpList=new ArrayList<>();
+        int beginningOfTheCycle=0;
+        Duration durationTenSeconds=Duration.ofSeconds(10);
+        Duration durationTenMinutes=Duration.ofMinutes(10);//podmiana na wartość jako argument metody?
+        for(int i=0; i<moldingDTOS.size(); i++){
+            System.out.println("XXXXXXXXXXXXXXXXXXXPUNKT STARTOWY CYKLUXXXXXXXXXXXX  "+ beginningOfTheCycle);
         if(i<moldingDTOS.size()-1){
-            Duration d1 = Duration.between(moldingDTOS.get(i).getTime(), moldingDTOS.get(i+1).getTime());
-            Duration d2=Duration.ofSeconds(10);
-            if(d1.compareTo(d2)<=0){
+            Duration determineIfLastedTenSeconds = Duration.between(moldingDTOS.get(i).getTime(), moldingDTOS.get(i+1).getTime());
+            if(determineIfLastedTenSeconds.compareTo(durationTenSeconds)<=0){
                 System.out.println("Roznica mniejsza niz 10s");
                 System.out.println(moldingDTOS.get(i).getTime());
+                tmpList.add(moldingDTOS.get(i));
             }
             else {
                 System.out.println("Roznica wieksza niz 10s");
                 System.out.println(moldingDTOS.get(i).getTime());
+                Duration determineIfLastedTenMinutes= Duration.between(moldingDTOS.get(beginningOfTheCycle).getTime(), moldingDTOS.get(i).getTime());
+                if(determineIfLastedTenMinutes.compareTo(durationTenMinutes)<=0){
+                    System.out.println("-------------ROZNICA W CYKLACH MNIEJSZA NIZ 10 MIN");
+                    tmpList.clear();
+                    beginningOfTheCycle=i+1;
+                }
+                else {
+                    System.out.println("++++++++++ROZNICA W CYKLACH WIEKSZA NIZ 10 MIN+++++++++");
+                    reducedList.addAll(tmpList);
+                    tmpList.clear();
+                    beginningOfTheCycle=i+1;
+
+                }
+
+
             }
         }
             }
