@@ -149,7 +149,7 @@ public class CSVDataLoader {
         List<MoldingDTO> reducedList=new ArrayList<>();
         List<MoldingDTO> tmpList=new ArrayList<>();
         int beginningOfTheCycle=0;
-        Duration durationTenSeconds=Duration.ofSeconds(10);
+        Duration durationTenSeconds=Duration.ofSeconds(30);
         Duration durationTenMinutes=Duration.ofMinutes(10);//podmiana na wartość jako argument metody?
         for(int i=0; i<moldingDTOS.size(); i++){
             System.out.println("XXXXXXXXXXXXXXXXXXXPUNKT STARTOWY CYKLUXXXXXXXXXXXX  "+ beginningOfTheCycle);
