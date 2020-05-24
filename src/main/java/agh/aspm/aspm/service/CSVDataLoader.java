@@ -1,53 +1,69 @@
 package agh.aspm.aspm.service;
 
 import agh.aspm.aspm.model.MoldingDTO;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import static java.time.temporal.ChronoUnit.SECONDS;
 
 @Component
 public class CSVDataLoader {
 
-    public List<MoldingDTO> getBySpeed(String speed) {
-        List<MoldingDTO> moldingDTOS=fetchData().stream()
+    public List<String> saveFile(MultipartFile file, HttpServletRequest request) {
+        String filePath = "/";
+        if (!file.isEmpty()) {
+            try {
+                String uploadsDir = "/uploads/";
+                String realPathtoUploads = request.getServletContext().getRealPath(uploadsDir);
+                if (!new File(realPathtoUploads).exists()) {
+                    new File(realPathtoUploads).mkdir();
+                }
+
+                String orgName = file.getOriginalFilename();
+                filePath = realPathtoUploads + orgName;
+                File dest = new File(filePath);
+                file.transferTo(dest);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return Collections.singletonList(filePath);
+    }
+    public List<MoldingDTO> getBySpeed(String speed, String url) {
+        List<MoldingDTO> moldingDTOS = fetchData(url).stream()
                 .filter(x -> speed.equals(x.getMoldingSpeed()))
                 .collect(Collectors.toList());
-        moldingDTOS=reduceNotLongerThanTenMinutes(moldingDTOS);
-        return moldingDTOS;
+
+        return reduceNotLongerThanTenMinutes(moldingDTOS);
     }
 
-    public List<MoldingDTO> getCSVFile() {
-        return fetchData();
+    public List<MoldingDTO> getCSVFile(String url) {
+        return fetchData(url);
     }
 
-    private List<MoldingDTO> fetchData() {
+    private List<MoldingDTO> fetchData(String url) {
         List<MoldingDTO> moldingDTOS = new LinkedList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern ( "yyyy-MM-dd HH:mm:ss" );
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        try(Scanner sc = new Scanner(new InputStreamReader(new ClassPathResource("aspm_data.csv").getInputStream()))) {
+        try (Scanner sc = new Scanner(new FileInputStream(url))) {
             sc.useDelimiter("\n");
 
-            while (sc.hasNext())
-            {
+            while (sc.hasNext()) {
                 String next = sc.next();
                 String[] values = next.split(",");
                 moldingDTOS.add(
                         MoldingDTO.builder()
-                                .time(LocalDateTime.parse(values[0].substring(0,19), formatter))
+                                .time(LocalDateTime.parse(values[0].substring(0, 19), formatter))
                                 .P1010(values[1])
                                 .P1012(values[2])
                                 .P1014(values[3])
@@ -142,46 +158,37 @@ public class CSVDataLoader {
                 .setScale(1, RoundingMode.HALF_UP)
                 .toPlainString();
     }
-    private List<MoldingDTO> reduceNotLongerThanTenMinutes(List<MoldingDTO> moldingDTOS){
-        //TODO
-        //Jeśli różnica dwóch sąsiednich <=10s - dodajemy element do nowej listy i zapisujemy w jednej zmiennej tymczasowej jego indeks
-        //W momencie napotkania różnicy większej niż 10s porównujemy czy czas na startowym indeksie z obecnym jest <=10min
-        List<MoldingDTO> reducedList=new ArrayList<>();
-        List<MoldingDTO> tmpList=new ArrayList<>();
-        int beginningOfTheCycle=0;
-        Duration durationTenSeconds=Duration.ofSeconds(30);
-        Duration durationTenMinutes=Duration.ofMinutes(10);//podmiana na wartość jako argument metody?
-        for(int i=0; i<moldingDTOS.size(); i++){
-            System.out.println("XXXXXXXXXXXXXXXXXXXPUNKT STARTOWY CYKLUXXXXXXXXXXXX  "+ beginningOfTheCycle);
-        if(i<moldingDTOS.size()-1){
-            Duration determineIfLastedTenSeconds = Duration.between(moldingDTOS.get(i).getTime(), moldingDTOS.get(i+1).getTime());
-            if(determineIfLastedTenSeconds.compareTo(durationTenSeconds)<=0){
-                System.out.println("Roznica mniejsza niz 10s");
-                System.out.println(moldingDTOS.get(i).getTime());
-                tmpList.add(moldingDTOS.get(i));
-            }
-            else {
-                System.out.println("Roznica wieksza niz 10s");
-                System.out.println(moldingDTOS.get(i).getTime());
-                Duration determineIfLastedTenMinutes= Duration.between(moldingDTOS.get(beginningOfTheCycle).getTime(), moldingDTOS.get(i).getTime());
-                if(determineIfLastedTenMinutes.compareTo(durationTenMinutes)<=0){
-                    System.out.println("-------------ROZNICA W CYKLACH MNIEJSZA NIZ 10 MIN");
-                    tmpList.clear();
-                    beginningOfTheCycle=i+1;
+
+    private List<MoldingDTO> reduceNotLongerThanTenMinutes(List<MoldingDTO> moldingDTOS) {
+        List<MoldingDTO> reducedList = new ArrayList<>();
+        List<MoldingDTO> tmpList = new ArrayList<>();
+
+        int beginningOfTheCycle = 0;
+
+        Duration durationThirtySeconds = Duration.ofSeconds(30);
+        Duration durationTenMinutes = Duration.ofMinutes(10);
+
+        for (int i = 0; i < moldingDTOS.size(); i++) {
+
+            if (i < moldingDTOS.size() - 1) {
+                Duration determineIfLastedTenSeconds = Duration.between(moldingDTOS.get(i).getTime(), moldingDTOS.get(i + 1).getTime());
+
+                if (determineIfLastedTenSeconds.compareTo(durationThirtySeconds) <= 0) {
+                    tmpList.add(moldingDTOS.get(i));
+                } else {
+                    Duration determineIfLastedTenMinutes = Duration.between(moldingDTOS.get(beginningOfTheCycle).getTime(), moldingDTOS.get(i).getTime());
+
+                    if (determineIfLastedTenMinutes.compareTo(durationTenMinutes) <= 0) {
+                        beginningOfTheCycle = i + 1;
+                    } else {
+                        reducedList.addAll(tmpList);
+                        tmpList.clear();
+                        beginningOfTheCycle = i + 1;
+                    }
                 }
-                else {
-                    System.out.println("++++++++++ROZNICA W CYKLACH WIEKSZA NIZ 10 MIN+++++++++");
-                    reducedList.addAll(tmpList);
-                    tmpList.clear();
-                    beginningOfTheCycle=i+1;
-
-                }
-
-
             }
         }
-            }
-return reducedList;
+        return reducedList;
     }
 }
 
